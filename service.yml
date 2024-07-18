@@ -1,0 +1,25 @@
+name: wb-adapter-view
+description: 
+zone: nextgen
+maintainer: home
+log-appender: stdout
+contributors:
+  home: "Полный цикл разработки сервиса"
+integrations:
+  data:
+    postgresql:
+      - wb-adapter-view
+    
+    
+    
+  internal:
+    openapi:
+      - https://git.1cupis.org/ng/apis/contracts/-/blob/master/wb_adapter_view_openapi.yml
+    
+  external:
+    openapi:
+      http:
+        income:
+          - <кто ходит в сервис извне>
+        outcome:
+          - <куда ходит сервис вовне>

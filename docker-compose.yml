@@ -1,0 +1,56 @@
+version: "3.9"
+
+volumes:
+  pg_data:
+
+x-wb-adapter-view-base: &wb-adapter-view-base
+  build:
+    context: .
+    dockerfile: Dockerfile.backend
+  profiles: [ "app" ]
+  depends_on:
+    init:
+      condition: service_completed_successfully
+  environment:
+    DEBUG: "False"
+    NAMESPACE: "local-stage"
+    POSTGRES_HOST: "db"
+    POSTGRES_PORT: "5432"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: "postgres"
+    PROMETHEUS_MULTIPROC_DIR: "/opt/cupis/prometheus_metrics"
+
+services:
+  db:
+    image: postgres:12
+    environment:
+      POSTGRES_DB: wb-adapter-view
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+  
+  init:
+    <<: *wb-adapter-view-base
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - bash
+      - -c
+      - |
+        python manage.py migrate --no-input
+
+  backend:
+    <<: *wb-adapter-view-base
+    command: gunicorn -c gunicorn.py project.wsgi:application -w 5 --timeout 90
+    ports:
+      - "8000:8000"
+  

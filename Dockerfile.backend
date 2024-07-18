@@ -1,0 +1,30 @@
+FROM registry.1cupis.org/docker_base/ci/python:3.12-01.04.2024 AS builder-image
+
+WORKDIR /opt/cupis/
+
+COPY ./src/backend/poetry.lock ./src/backend/pyproject.toml ./
+
+RUN poetry install --no-dev
+
+COPY ./src/backend/ ./
+
+FROM registry.1cupis.org/docker_base/secure_images/python:3.12-01.04.2024
+
+USER root
+RUN apt-get update \
+    && apt-get install --fix-broken --no-install-recommends -y \
+    libpq5; \
+    rm -rf /var/lib/apt/lists/*;
+
+ENV VIRTUAL_ENV=/opt/cupis/.venv
+ENV PATH="/opt/cupis/.venv/bin:$PATH"
+
+COPY --from=builder-image /opt/cupis/ .
+
+# Create / empty folder for prometheus multiproc metrics collector
+RUN mkdir /opt/cupis/prometheus_metrics || rm -rf ./prometheus_metrics/*
+RUN chown cupis /opt/cupis/prometheus_metrics
+
+RUN python3.12 manage.py collectstatic --noinput
+
+USER cupis
